@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drafting Table — Describe it, Diagram it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js"></script>
+<style>
+  :root{
+    --navy:#123152;
+    --navy-deep:#0d2440;
+    --grid-line: rgba(163, 199, 232, 0.14);
+    --line: #8fb8dd;
+    --paper:#f2eee0;
+    --paper-dim:#e6e0cc;
+    --ink:#1c2530;
+    --ink-soft:#5c6b7a;
+    --white:#eef3f8;
+    --pencil-red:#c1440e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--navy);
+    color:var(--white);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .app{max-width:1240px;margin:0 auto;padding:36px 26px 70px;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;margin-bottom:28px;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--line);margin:0 0 8px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:32px;margin:0;letter-spacing:.01em;}
+  .tagline{font-size:13.5px;color:var(--line);max-width:360px;line-height:1.5;margin:6px 0 0;}
+  .scale-note{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--line);text-align:right;line-height:1.7;opacity:.8;}
+
+  .layout{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start;}
+  @media (max-width:880px){.layout{grid-template-columns:1fr;}}
+
+  /* Control panel */
+  .panel{
+    background:var(--paper);color:var(--ink);
+    padding:22px 20px;
+    box-shadow:0 10px 26px rgba(0,0,0,0.28);
+  }
+  .panel-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px;}
+  textarea{
+    width:100%;min-height:130px;resize:vertical;
+    font-family:'Inter',sans-serif;font-size:14px;line-height:1.5;
+    border:1px solid var(--paper-dim);background:#fbf9f1;color:var(--ink);
+    padding:12px;outline:none;
+  }
+  textarea:focus{border-color:var(--pencil-red);}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 16px;}
+  .chip{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;
+    border:1px solid var(--paper-dim);background:transparent;color:var(--ink-soft);
+    padding:5px 9px;cursor:pointer;
+  }
+  .chip:hover{border-color:var(--pencil-red);color:var(--pencil-red);}
+  .btn{
+    width:100%;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.05em;text-transform:uppercase;
+    background:var(--ink);color:var(--paper);border:none;padding:13px;cursor:pointer;
+    transition:background .12s ease;
+  }
+  .btn:hover{background:#3a3627;}
+  .btn:disabled{opacity:.5;cursor:default;}
+  .btn.secondary{background:transparent;color:var(--ink);border:1px solid var(--ink);margin-top:8px;}
+  .btn.secondary:hover{background:var(--ink);color:var(--paper);}
+  .err{margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--pencil-red);}
+
+  .hint{margin-top:18px;padding-top:14px;border-top:1px dashed var(--paper-dim);font-size:12px;color:var(--ink-soft);line-height:1.55;}
+
+  /* Canvas */
+  .canvas-wrap{
+    position:relative;
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0/28px 28px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0/28px 28px,
+      var(--navy-deep);
+    min-height:520px;
+    border:1px solid rgba(163,199,232,0.25);
+    display:flex;align-items:center;justify-content:center;
+    padding:30px;
+    overflow:auto;
+  }
+  .canvas-empty{
+    font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--line);
+    text-align:center;max-width:280px;opacity:.75;
+  }
+  .canvas-loading{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--line);}
+  #diagramHost{width:100%;display:flex;align-items:center;justify-content:center;}
+  #diagramHost svg{max-width:100%;height:auto;}
+
+  .titleblock{
+    position:absolute;bottom:14px;right:14px;
+    background:var(--paper);color:var(--ink);
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.5;
+    padding:10px 14px;border:1px solid var(--ink);
+    min-width:160px;
+  }
+  .titleblock div{display:flex;justify-content:space-between;gap:14px;}
+  .titleblock b{color:var(--pencil-red);}
+
+  .canvas-actions{
+    position:absolute;top:14px;right:14px;display:flex;gap:8px;
+  }
+  .icon-btn{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;
+    background:rgba(238,243,248,0.08);color:var(--white);border:1px solid rgba(238,243,248,0.3);
+    padding:7px 11px;cursor:pointer;
+  }
+  .icon-btn:hover{background:rgba(238,243,248,0.18);}
+
+  /* Code drawer */
+  .drawer{margin-top:16px;}
+  .drawer-toggle{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--line);
+    background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;
+  }
+  .drawer-body{display:none;margin-top:12px;}
+  .drawer-body.open{display:block;}
+  #codeArea{
+    width:100%;min-height:150px;
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.5;
+    background:var(--navy-deep);color:var(--white);
+    border:1px solid rgba(163,199,232,0.3);padding:12px;outline:none;
+    resize:vertical;
+  }
+  .drawer-actions{display:flex;gap:8px;margin-top:10px;}
+  .drawer-actions .btn{width:auto;padding:9px 16px;font-size:11.5px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <p class="eyebrow">Sheet 01 — Text to Diagram</p>
+      <h1>Drafting Table</h1>
+      <p class="tagline">Describe a system, flow, or process. It gets drafted into a diagram — no diagramming tool required.</p>
+    </div>
+    <div class="scale-note" id="dateNote"></div>
+  </header>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-label">Describe what to diagram</div>
+      <textarea id="descInput" placeholder="e.g. A user signs up, gets an email verification link, confirms it, then lands on the onboarding flow."></textarea>
+      <div class="chips">
+        <button class="chip" data-text="A client hits an API gateway, which load-balances across three app servers backed by a shared Postgres database and a Redis cache.">cloud architecture</button>
+        <button class="chip" data-text="User submits a form, frontend validates it, sends to backend API, backend writes to database, backend returns confirmation, frontend shows success message.">user flow</button>
+        <button class="chip" data-text="Developer pushes code, CI runs tests, on success it builds a Docker image, pushes to registry, then deploys to staging, then production after manual approval.">CI/CD pipeline</button>
+        <button class="chip" data-text="Order placed, payment processed, on success inventory is reserved and a shipping label is created, on failure the order is cancelled and customer is notified.">process flow</button>
+      </div>
+      <button class="btn" id="draftBtn">Draft it</button>
+      <div class="err" id="errBox" style="display:none;"></div>
+      <div class="hint">If a description doesn't render cleanly, open "Edit code" below the diagram and adjust it directly, then redraw.</div>
+    </div>
+
+    <div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas-actions" id="canvasActions" style="display:none;">
+          <button class="icon-btn" id="downloadBtn">Download SVG</button>
+        </div>
+        <div class="canvas-empty" id="canvasEmpty">Nothing drafted yet.<br>Describe something on the left and click "Draft it."</div>
+        <div id="diagramHost"></div>
+        <div class="titleblock" id="titleBlock" style="display:none;">
+          <div><span>FIG.</span><b id="figNo">001</b></div>
+          <div><span>REV</span><b id="revNo">A</b></div>
+          <div><span>TYPE</span><span id="diagType">—</span></div>
+          <div><span>DATE</span><span id="figDate">—</span></div>
+        </div>
+      </div>
+
+      <div class="drawer">
+        <button class="drawer-toggle" id="drawerToggle">Show / edit diagram code</button>
+        <div class="drawer-body" id="drawerBody">
+          <textarea id="codeArea" spellcheck="false" placeholder="Mermaid diagram code appears here once drafted."></textarea>
+          <div class="drawer-actions">
+            <button class="btn secondary" id="redrawBtn">Redraw from code</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  themeVariables: {
+    primaryColor: '#1c3f63',
+    primaryTextColor: '#eef3f8',
+    primaryBorderColor: '#8fb8dd',
+    lineColor: '#8fb8dd',
+    secondaryColor: '#274b73',
+    tertiaryColor: '#274b73',
+    fontFamily: 'IBM Plex Mono, monospace',
+    fontSize: '14px',
+    background: 'transparent',
+    mainBkg: '#1c3f63',
+    textColor: '#eef3f8',
+    edgeLabelBackground: '#123152',
+  },
+  flowchart: { curve: 'basis' }
+});
+
+const descInput = document.getElementById('descInput');
+const draftBtn = document.getElementById('draftBtn');
+const errBox = document.getElementById('errBox');
+const canvasWrap = document.getElementById('canvasWrap');
+const canvasEmpty = document.getElementById('canvasEmpty');
+const canvasActions = document.getElementById('canvasActions');
+const diagramHost = document.getElementById('diagramHost');
+const titleBlock = document.getElementById('titleBlock');
+const figNo = document.getElementById('figNo');
+const revNo = document.getElementById('revNo');
+const diagType = document.getElementById('diagType');
+const figDate = document.getElementById('figDate');
+const drawerToggle = document.getElementById('drawerToggle');
+const drawerBody = document.getElementById('drawerBody');
+const codeArea = document.getElementById('codeArea');
+const redrawBtn = document.getElementById('redrawBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const dateNote = document.getElementById('dateNote');
+
+let figCount = 0;
+let revLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+let revIndex = 0;
+let renderSeq = 0;
+
+const today = new Date();
+dateNote.innerHTML = 'DRAFTED&nbsp;' + today.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'2-digit'}) + '<br>SCALE&nbsp;NOT&nbsp;TO&nbsp;SCALE';
+
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    descInput.value = chip.dataset.text;
+    descInput.focus();
+  });
+});
+
+drawerToggle.addEventListener('click', () => {
+  drawerBody.classList.toggle('open');
+});
+
+function showError(msg) {
+  errBox.textContent = msg;
+  errBox.style.display = 'block';
+}
+function clearError() {
+  errBox.style.display = 'none';
+}
+
+function detectType(code) {
+  const first = code.trim().split('\n')[0].toLowerCase();
+  if (first.includes('sequencediagram')) return 'sequence';
+  if (first.includes('classdiagram')) return 'class';
+  if (first.includes('erdiagram')) return 'entity-relation';
+  if (first.includes('statediagram')) return 'state';
+  if (first.includes('gantt')) return 'gantt';
+  if (first.includes('flowchart') || first.includes('graph')) return 'flowchart';
+  return 'diagram';
+}
+
+async function renderMermaid(code, { isNewFigure }) {
+  renderSeq++;
+  const id = 'mmd-' + renderSeq;
+  const { svg } = await mermaid.render(id, code);
+  diagramHost.innerHTML = svg;
+  canvasEmpty.style.display = 'none';
+  canvasActions.style.display = 'flex';
+  titleBlock.style.display = 'block';
+
+  if (isNewFigure) {
+    figCount++;
+    revIndex = 0;
+    figNo.textContent = String(figCount).padStart(3, '0');
+  } else {
+    revIndex = Math.min(revIndex + 1, revLetters.length - 1);
+  }
+  revNo.textContent = revLetters[revIndex];
+  diagType.textContent = detectType(code);
+  figDate.textContent = new Date().toLocaleDateString(undefined,{month:'short',day:'2-digit'});
+}
+
+async function fetchDiagramCode(description) {
+  const prompt = 'Turn this description into a diagram: "' + description + '"\n\n' +
+    'Respond with ONLY a single mermaid code block (```mermaid ... ```) and nothing else — no explanation before or after. ' +
+    'Choose whichever Mermaid diagram type best fits (flowchart, sequenceDiagram, classDiagram, erDiagram, stateDiagram-v2, gantt). ' +
+    'Keep node labels short and clear. For flowcharts pick TD or LR based on what reads best. ' +
+    'If a label needs a line break, use <br/> — Mermaid does not support \\n as a line break in labels.';
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!res.ok) throw new Error('request failed (' + res.status + ')');
+  const data = await res.json();
+  const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+  const match = text.match(/```mermaid\s*([\s\S]*?)```/i);
+  let code = match ? match[1].trim() : text.trim();
+  if (!code) throw new Error('empty response');
+  // Mermaid flowcharts render line breaks as <br/>, not literal \n —
+  // convert any literal backslash-n sequences the model may have written.
+  code = code.replace(/\\n/g, '<br/>');
+  return code;
+}
+
+async function draft() {
+  clearError();
+  const description = descInput.value.trim();
+  if (!description) { showError('Describe something first.'); return; }
+
+  draftBtn.disabled = true;
+  draftBtn.textContent = 'Drafting…';
+  canvasEmpty.style.display = 'block';
+  canvasEmpty.textContent = 'Sketching it out…';
+
+  try {
+    const code = await fetchDiagramCode(description);
+    codeArea.value = code;
+    await renderMermaid(code, { isNewFigure: true });
+  } catch (err) {
+    canvasEmpty.textContent = 'Nothing drafted yet.\nDescribe something on the left and click "Draft it."';
+    showError('Could not draft that one (' + err.message + '). Try rephrasing, or write the diagram code directly below.');
+    drawerBody.classList.add('open');
+  } finally {
+    draftBtn.disabled = false;
+    draftBtn.textContent = 'Draft it';
+  }
+}
+
+async function redraw() {
+  clearError();
+  const code = codeArea.value.trim();
+  if (!code) { showError('Nothing to redraw — paste or generate some diagram code first.'); return; }
+  try {
+    await renderMermaid(code, { isNewFigure: false });
+  } catch (err) {
+    showError('That code has a syntax issue: ' + err.message);
+  }
+}
+
+downloadBtn.addEventListener('click', () => {
+  const svgEl = diagramHost.querySelector('svg');
+  if (!svgEl) return;
+  const blob = new Blob([svgEl.outerHTML], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'diagram-fig-' + figNo.textContent + '.svg';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+draftBtn.addEventListener('click', draft);
+redrawBtn.addEventListener('click', redraw);
+descInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) draft();
+});
+</script>
+</body>
+</html>
